@@ -1,0 +1,104 @@
+目录
+  概述
+  快速入门
+  示例
+  常问问提
+  贡献
+  许可证
+  
+概述
+    使用这个来自 MS Open Tech 的SDK，你可以访问所有 Office 365 的服务 并且存储来自Android app的数据。
+    该SDK提供的功能有：
+        SharePoint Online Files and Lists
+        Exchange Online Mail, Calendars, and Contacts
+        Azure AD Directory (Graph)
+    Android Office 365 使用了Android Stdio支持Gradle管理依赖。在你的工程中使用该SDK，只需将这些库添加
+    到gradle.build的依赖列表中。具体请看 ： https://github.com/OfficeDev/Office-365-SDK-for-Android/wiki/Include-Dependencies-using-Gradle
+    （注意：在开始前，请确定你用的是Android Stdio.现在的版本是v1.0！）
+    
+快速入门
+    现在我们创建一个使用SDK和the Azure AD Authentication Library (ADAL)来取回数据的应用程序。
+    1、在Android Studio中创建一个新的Android应用程序。
+    2、找到在app模块中 app/build.gradle并添加如下依赖。在此次示例中我们仅仅使用到outlook-service”，但他们都被列在此处以供参考。
+      dependencies {
+        // base OData stuff:
+        compile group: 'com.microsoft.services', name: 'odata-engine-core', version: '0.12.1'
+        compile group: 'com.microsoft.services', name: 'odata-engine-android-impl', version: '0.12.1', ext:'aar'
+
+        // choose the services/SDKs you need:
+        compile group: 'com.microsoft.services', name: 'outlook-services', version: '0.12.1'
+        compile group: 'com.microsoft.services', name: 'discovery-services', version: '0.12.1'
+        compile group: 'com.microsoft.services', name: 'directory-services', version: '0.12.1'
+        compile group: 'com.microsoft.services', name: 'file-services', version: '0.12.1'
+        compile group: 'com.microsoft.services', name: 'sharepoint-services', version: '0.12.1', ext:'aar'
+
+        // ADAL
+        compile (group: 'com.microsoft.aad', name: 'adal', version: '1.0.5') {
+          // exclude group: 'com.android.support'   // this may not be necessary
+        }
+      }
+      注意：为了避免 Android support library 的相关错误，你可能需要确认它没有ADAL冗余添加。这就是为什么我们要将它加在此处。
+    3、按照在README for ADAL上的说明做认证。或者，使用例子中的AuthenticationController.jav。AuthenticationController.java
+      使用ADALDependencyResolver去handle缓存访问和自动刷新token。
+    4、在以下两个可用依赖解析器，选择一个建立。
+      
+      DefaultDependencyResolver-添加一个access token 给解析器。你负责获悉token过期然后替换它。
+        String accessToken = "base64 JWT from ADAL";
+        DefaultDependencyResolver dependencyResolver = new DefaultDependencyResolver(accessToken);
+      
+      ADALDependencyResolver-添加一个初始化的ADAL AuthenticationContext给该解析器。该依赖解析器handle访问缓存、刷新tokens
+      、必要时使用这个刷新的token。如果刷新token也过期你负责发起交互式登录。
+        AuthenticationContext authContext = new AuthenticationContext(activity, authorityUrl, false /* verifyAuthority */ );
+        ADALDependencyResolver dependencyResolver = new ADALDependencyResolver(authContext, resourceId, clientId);
+    
+    5、现在创将一个API client并且使用如下代码检索所有消息。我们正在讨 Outlook Services，所有我们使用它URL。
+      String baseUrl = "https://outlook.office365.com/api/v1.0";
+      OutlookClient client = new OutlookClient(baseUrl, dependencyResolver);
+      ListenableFuture<List<Message>> messagesFuture = client
+                           .getMe()
+                           .getFolders()
+                           .getById("Inbox")
+                           .getMessages()
+                           .read();
+      Futures.addCallback(messagesFuture, new FutureCallback<List<Message>>() {
+          @Override
+          public void onSuccess(final List<Message> result) {
+          runOnUiThread(new Runnable() {
+              @Override
+              public void run() {
+                  Toast.makeText(MainActivity.this,
+                        "Items: " + Integer.valueOf(result.size()).toString(),
+                        Toast.LENGTH_LONG).show();
+              // do more with the 'result' messages
+              }
+          });
+          }
+
+          @Override
+          public void onFailure(final Throwable t) {
+              // handle error
+          });
+      }
+      });
+      
+  示例
+    在示例文件夹一个简单的例子Outlook Services去检索邮件和事件。可查看更多示例。
+    
+  常问问提
+    如何使用CalendarView  ： https://github.com/OfficeDev/Office-365-SDK-for-Android/wiki/Using-Calendar-View
+    如何Eclipse使用SDK  ： https://github.com/OfficeDev/Office-365-SDK-for-Android/wiki/Eclipse-build-instructions
+    如何处理ETags和乐观并发（optimistic concurrency）【注：乐观并发不对劲，请大家纠正】 ： https://github.com/OfficeDev/Office-365-SDK-for-Android/wiki/ETags-and-Optimistic-Concurrency
+    已知问题  ： https://github.com/OfficeDev/Office-365-SDK-for-Android/wiki/Known-Issues
+    
+  贡献
+    在提交你 pull request之前你需要注册 Contributor License Agreement（https://cla.msopentech.com/）。如果完成了贡献者许可协议，
+    当你接收到一封包含一个链接文档的Emai，你需要通过这张表提交一个请求，然后电子注册贡献者许可协议。对于任何
+    Microsoft Open Technologies OSS 工程来说，这仅需完成一次。
+    
+  许可证
+    版权所有(c)Microsoft Open Technologies, Inc。保留所有权利。遵循Apache许可，版本2.0。
+
+        
+      
+    
+  
